@@ -1,0 +1,169 @@
+/////////////////////////////////////////////////////
+////////// Projeto Segurança Residencial ////////////
+////////// bY: Diego Narducci ///////////////////////
+////////// Version: 0.1 b ///////////////////////////
+/////////////////////////////////////////////////////
+// 5v -> condutores branco e amarelo
+// Porta Cozinha            -> vermelho
+// Porta Sala               -> azul
+// Porta Terraço            -> verde
+// Porta CasaTraz           -> preto
+// Porta Portao Frente      -> preto
+// Porta Porta Quarto Bruno -> azul
+
+// pinos dos sensores
+// Sensor Porta Cozinha       ->   sensor1 ->  pino 2
+// Sensor Porta Sala          ->   sensor2 ->  pino 3
+// Sensor Porta Terraço       ->   sensor3 ->  pino 4
+// Sensor Porta CasaTraz      ->   sensor4 ->  pino 5
+// Sensor Porta Portao Frente ->   sensor5 ->  pino 6
+// Sensor Porta Quarto Bruno  ->   sensor6 ->  pino 7
+
+/////
+#define thread_scan1 100
+unsigned long int thread_scan1_millis = 0;
+#define thread_scan2 1000
+unsigned long int thread_scan2_millis = 0;
+/////
+
+int led_ativado = 11;
+int botao_ativado = 7;
+int sirene_1 = 12; // usando led do pino 13 para testar
+int led_teste = 13;
+
+int sensor_1 = 2;
+int sensor_2 = 3;
+int sensor_3 = 4;
+int sensor_4 = 5;
+int sensor_5 = 6;
+
+String sensor1, sensor2, sensor3, sensor4, sensor5, sensor6, lugar, alarme_estado = "Nao Ativado", disparado = "Nao Ativado"; 
+
+unsigned long int tempo_check_posDisparo = 0; // nao mecher
+unsigned long int tempo_impressao_serial = 0; // nao mecher
+unsigned long int check_time_startup = 0;  // nao mecher
+
+unsigned int intervalo_check_posDisparo = 10000;
+unsigned int intervalo_impressao_serial = 1000;
+
+unsigned int alarm_count = 0; // nao mecher
+unsigned int alarm_count_max = 3;
+bool alarme_disparado = false; // nao mecher.
+bool eterno_disparo = false;
+bool unico_disparo = false; 
+
+////////////////////////////////////////////////////////////////////////
+
+void scan_sensores(){ // funcao para scanear sensores a cada 200ms.
+  if(digitalRead(sensor_1) == false){
+    sensor1 = "p1 Aberto";
+    alarm_count++;
+    if(alarm_count >= alarm_count_max) { lugar = "'Porta Cozinha'"; }
+  }else{ sensor1 = "p1 Fechado"; }
+  
+  if(digitalRead(sensor_2) == false){
+    sensor2 = "p2 Aberto";
+    alarm_count++;
+    if(alarm_count >= alarm_count_max) { lugar = "'Porta Sala'"; }
+  }else{ sensor2 = "p2 Fechado"; }
+}
+
+void scan_sensores2(){
+  if(alarm_count >= alarm_count_max){
+    if((alarme_disparado == false) && (digitalRead(botao_ativado) == false)){
+      alarm_count = 0;
+      alarme_disparado = true;
+      disparo(true);
+      tempo_check_posDisparo = millis();
+    }
+  }else{
+    alarm_count = 0;
+  }
+
+  if((millis() - tempo_check_posDisparo >= intervalo_check_posDisparo) && (alarme_disparado == true)){
+    disparo(false);
+    if(!unico_disparo){ alarme_disparado = false; }
+    alarm_count = 0;
+    tempo_check_posDisparo = millis();
+  }
+}
+//////////////////////////////////////////////////////////////////////
+int check_startup(){
+  if((digitalRead(sensor_1) == false) || 
+     (digitalRead(sensor_2) == false)) {
+    return false;
+  }
+  return true;
+}
+/////////////////////////////////////////////////////////////////////
+void imprimir(){
+  if(millis() - tempo_impressao_serial >= intervalo_impressao_serial){ // Impressao Serial
+    tempo_impressao_serial = millis();
+    Serial.println("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    Serial.println("Sensor Porta Cozinha: " + sensor1);
+    Serial.println("Sensor Porta Sala : " + sensor2);
+    Serial.println("Sensor Porta Terraco : " + sensor3);
+    Serial.println("Sensor Porta CasaTras : " + sensor4);
+    Serial.println();
+    Serial.println("Estado Alarme: " + alarme_estado);
+    Serial.println("Estado Disparo: " + disparado);
+    Serial.println("================================");
+  }
+}
+/////////////////////////////////////////////////////////////////////
+bool disparo(bool x){
+  if(x == true){
+    digitalWrite(led_teste,HIGH);
+    digitalWrite(8,HIGH);
+    disparado = " Alarme: Ativado";
+    disparado += " em " + lugar;
+  }else{
+    if(!eterno_disparo){
+      digitalWrite(led_teste,LOW);
+      digitalWrite(8,LOW);
+      disparado = "Alarme: Nao Ativado";
+    }
+  }
+}
+/////////////////////////////////////////////////////////////////////
+void setup() {
+  Serial.begin(115200);
+  pinMode(sirene_1,OUTPUT); // Sirene
+  pinMode(led_teste,OUTPUT);
+  pinMode(led_ativado,OUTPUT);
+  
+  pinMode(sensor_1,INPUT);
+  pinMode(sensor_2,INPUT);
+  
+  pinMode(7,INPUT);
+  pinMode(8,OUTPUT);
+  
+  digitalWrite(8, LOW);
+  digitalWrite(sirene_1, LOW);
+  digitalWrite(led_ativado, LOW);
+  
+  while(check_startup() ==  false){
+    if(millis() - check_time_startup >= 3000){
+      scan_sensores();
+      imprimir();
+    }
+    digitalWrite(8,HIGH);delay(100); //otimizar
+    digitalWrite(8,LOW);delay(100);
+  }
+  alarm_count = 0;
+  alarme_estado = "Ativado";
+}
+////////////////////////////////////////////////////////////////////
+void loop() {
+  if(millis() - thread_scan1_millis >= thread_scan1){ // thread 1 - 200ms
+    scan_sensores();
+    thread_scan1_millis = millis();
+  }
+  
+  if(millis() - thread_scan2_millis >= thread_scan2){ // thread 2 - 1000ms
+    scan_sensores2();
+    thread_scan2_millis = millis();
+  }
+ 
+  imprimir();
+}
