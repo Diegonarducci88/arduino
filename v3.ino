@@ -72,16 +72,16 @@ String ldr1_str,
 
 void scan_sensores(){ // funcao para scanear sensores a cada 200ms.
   if(digitalRead(sensor_1) == false){
-    sensor1 = "p1 Aberto";
+    sensor1 = "p2 Aberto";
     alarm_count++;
     if(alarm_count >= alarm_count_max) { lugar = "'Porta Cozinha'"; }
-  }else{ sensor1 = "p1 Fechado"; }
+  }else{ sensor1 = "p2 Fechado"; }
   
   if(digitalRead(sensor_2) == false){
-    sensor2 = "p2 Aberto";
+    sensor2 = "p3 Aberto";
     alarm_count++;
     if(alarm_count >= alarm_count_max) { lugar = "'Porta Sala'"; }
-  }else{ sensor2 = "p2 Fechado"; }
+  }else{ sensor2 = "p3 Fechado"; }
 }
 
 void scan_sensores2(){
